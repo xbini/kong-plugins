@@ -68,9 +68,8 @@ function TesterHandler:header_filter(config)
   -- Eventually, execute the parent implementation
   -- (will log that your plugin is entering this context)
   TesterHandler.super.header_filter(self)
-  -- for k,v in pairs(responses) do
-  --   ngx.header[k] = v
-  -- end
+  local ip = ngx.var.remote_addr
+  ngx_log(NGX_ALERT, ip)
   ngx.header["response-token"] = "Hi! I am kong proxier."
   -- 当代码运行到body_filter_by_lua*时，HTTP报头（header）已经发送出去了。
   -- 如果在之前设置了跟响应体相关的报头，而又在body_filter_by_lua*中修改了响应体，会导致响应报头和实际响应的不一致。
@@ -82,13 +81,10 @@ function TesterHandler:header_filter(config)
   -- Implement any custom logic here
 end
 
-function TesterHandler:body_filter(config)
-  -- Eventually, execute the parent implementation
-  -- (will log that your plugin is entering this context)
+function exec_body(...)
   -- 每个请求都有一个最后的子请求，这个请求中ngx.arg[1]为空字符串，而 ngx.arg[2]为true。
   -- 这是因为Nginx的upstream相关模块，以及OpenResty的content_by_lua，
   -- 会单独发送一个设置了last_buf的空 buffer，来表示流的结束。
-  TesterHandler.super.body_filter(self)
   local chunk, eof = ngx.arg[1], ngx.arg[2]
   local ctx = ngx.ctx
   if ctx.buffer == nil then
@@ -104,11 +100,17 @@ function TesterHandler:body_filter(config)
   end
   if (eof) then
     local suffix = "\n-- From kong!"
-    ngx_log(NGX_ALERT, ctx.buffer)
     local body = ctx.buffer .. suffix
     ngx.arg[1] = body
     ctx.buffer = nil
   end
+end
+
+function TesterHandler:body_filter(config)
+  -- Eventually, execute the parent implementation
+  -- (will log that your plugin is entering this context)
+  TesterHandler.super.body_filter(self)
+  -- exec_body()
   -- Implement any custom logic here
 end
 
