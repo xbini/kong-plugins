@@ -1,19 +1,10 @@
 local BasePlugin = require "kong.plugins.base_plugin"
-local responses = require "kong.tools.responses"
-local header_filter = require "kong.plugins.response-transformer.header_transformer"
-local cjson = require "cjson"
-local cjson_safe = require "cjson.safe"
-local kong = kong
 
 local RequestLabelHandler = BasePlugin:extend()
-local is_json_body = header_filter.is_json_body
-local table_concat = table.concat
-local ngx_log = ngx.log
-local NGX_ALERT = ngx.ALERT
 
 local plugin_name = "request-label"
 
-RequestLabelHandler.VERSION = "0.0.1"
+RequestLabelHandler.VERSION = "1.0.0-0"
 RequestLabelHandler.PRIORITY = 10
 
 -- Your plugin handler's constructor. If you are extending the
@@ -59,7 +50,7 @@ function RequestLabelHandler:access(config)
   -- Eventually, execute the parent implementation
   -- (will log that your plugin is entering this context)
   RequestLabelHandler.super.access(self)
-  ngx.req.set_header("request-token", "嗨！兄弟，我们好久不见，你在哪里？")
+  ngx.req.set_header("request-label-go", "Hi!")
 
   -- Implement any custom logic here
 end
@@ -69,8 +60,7 @@ function RequestLabelHandler:header_filter(config)
   -- (will log that your plugin is entering this context)
   RequestLabelHandler.super.header_filter(self)
   local ip = ngx.var.remote_addr
-  ngx_log(NGX_ALERT, ip)
-  ngx.header["response-token"] = "Hi! I am kong proxier."
+  ngx.header["request-label-come"] = "Hi! I am kong proxier."
   -- 当代码运行到body_filter_by_lua*时，HTTP报头（header）已经发送出去了。
   -- 如果在之前设置了跟响应体相关的报头，而又在body_filter_by_lua*中修改了响应体，会导致响应报头和实际响应的不一致。
   -- 举个简单的例子：假设上游的服务器返回了Content-Length报头，而body_filter_by_lua*又修改了响应体的实际大小。
